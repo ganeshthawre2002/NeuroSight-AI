@@ -3,4 +3,7 @@ numpy
 sqlalchemy
 psycopg2-binary
 streamlit
+plotly
+scikit-learn
+joblib
 openai

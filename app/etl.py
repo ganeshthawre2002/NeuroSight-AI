@@ -3,51 +3,74 @@ import pandas as pd
 
 
 
-from churn_analysis import (
-    calculate_kpis,
-    contract_analysis,
-    tech_support_analysis,
-    online_security_analysis,
-)
-
-
-##### loading datasets ######
+#### Project Root ####
 
 project_root = Path(__file__).parent.parent
+
+#### dataset path ####
+
 csv_file = project_root / "data" / "telco_churn.csv"
 
+print(f"Loading file: {csv_file}")
+
+### loading csv ###
 
 df = pd.read_csv(csv_file)
 
+print("\n Dataset loaded successfully")
 
-#### Cleaning total charges 
+print("\nShape")
+print(df.shape)
+
+print("\nColumns")
+print(df.columns.tolist())
+
+print("\ndata types")
+print(df.dtypes)
+
+print("\nmissing values")
+print(df.isnull().sum())
+
+print("\nduplicate rows")
+print(df.duplicated().sum())
+
+
+print("\churn distribution")
+print(df["Churn"].value_counts())
+
+# Replace blank values with NaN
+df["TotalCharges"] = df["TotalCharges"].replace(" ", None)
+
+# Convert to numeric
 df["TotalCharges"] = pd.to_numeric(
     df["TotalCharges"],
     errors="coerce"
 )
 
-print("\n ===== Dataset overview =====")
-print("Shape:", df.shape)
+print("\nTotalCharges dtype:")
+print(df["TotalCharges"].dtype)
 
-
-print("\n ===== Missing total Charges =====")
+print("\nMissing TotalCharges:")
 print(df["TotalCharges"].isnull().sum())
 
 
-### KPI summary 
-print("\n ===== kpi summary =====")
-kpis = calculate_kpis(df)
 
 
-### contract analysis 
-print("\n ====== contract analysis =====") 
-print(contract_analysis(df))
+### connecting postgresql database 
 
-### tech support analysis
-print("\n ====== tech support analysis =====")
-print(tech_support_analysis(df))    
+from sqlalchemy import create_engine
 
-### online security analysis
-print("\n ====== online security analysis =====")
-print(online_security_analysis(df))
+engine = create_engine(
+    "postgresql://postgres:17032004@host.docker.internal:5433/neurosight"
+)
 
+df.to_sql(
+    "customers",
+    engine,
+    if_exists="replace",
+    index=False
+
+)
+
+
+print("\nData loaded into postgresql successfully")
