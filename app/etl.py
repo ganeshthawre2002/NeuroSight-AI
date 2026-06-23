@@ -35,7 +35,7 @@ print("\nduplicate rows")
 print(df.duplicated().sum())
 
 
-print("\churn distribution")
+print("\Churn Distribution")
 print(df["Churn"].value_counts())
 
 # Replace blank values with NaN
@@ -61,7 +61,7 @@ print(df["TotalCharges"].isnull().sum())
 from sqlalchemy import create_engine
 
 engine = create_engine(
-    "postgresql://postgres:17032004@host.docker.internal:5433/neurosight"
+    "postgresql://postgres:17032004@localhost:5434/neurosight"
 )
 
 df.to_sql(

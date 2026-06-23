@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 import pandas as pd
 
 engine = create_engine(
-    "postgresql://postgres:17032004@host.docker.internal:5433/neurosight"
+    "postgresql://postgres:17032004@localhost:5433/neurosight"
 )
 
 query = """
