@@ -1,19 +1,15 @@
-import streamlit as st 
-import plotly.express as px 
+import requests
+import streamlit as st
+import plotly.express as px
 
 from insight_engine import generate_insights
 
 from kpi_service import (
-    get_total_customers,
-    get_churned_customers,
-    get_churn_rate,
-    get_avg_monthly_charge,
-    get_avg_tenure,
     get_contract_churn,
     get_tenure_churn,
     get_payment_method_churn,
     get_customer_risk_segments,
-    get_revenue_risk
+    get_revenue_risk,
 )
 
 
@@ -30,25 +26,60 @@ st.markdown("### Cutomer Churn Intelligence Platform")
 
 st.divider()
 
-##### KPI Secton ###
-col1, col2, col3, col4, col5 = st.columns(5)
+#### kpis  ### API Configuration ###
+
+API_URL = "http://127.0.0.1:8000"
+
+#### KPI section ####
+
+try:
+    response = requests.get(
+        f"{API_URL}/kpis",
+        timeout=5
+    )
+
+    response.raise_for_status()
+
+    kpis = response.json()
+
+except Exception as e:
+    st.error(f"Unabe to connect to FastAPI: {e}")
+    st.stop()
+
+
+col1, col2, col3, col4, col5, = st.columns(5)
 
 with col1:
-    st.metric("Total Customers", get_total_customers())
+    st.metric(
+        label="Total Customers",
+        value=kpis["total_customers"]
+    )
 
 with col2:
-    st.metric("Churned Customers", get_churned_customers())
+    st.metric(
+        label="Churned Customers",
+        value=kpis["churned_customers"] 
+    )
 
 with col3:
-    st.metric("Churn Rate", get_churn_rate())
+    st.metric(
+        label="Churn Rate",
+        value=f"{kpis['churn_rate']}%"
+    )   
 
 with col4:
-    st.metric("Avg Monthly Charge", get_avg_monthly_charge())
+    st.metric(
+        label="Average Monthly Charge",
+        value=f"${kpis['avg_monthly_charge']:.2f}"
+    )
 
 with col5:
-    st.metric("Avg Tenure", get_avg_tenure())
+    st.metric(
+        label="Average Tenure",
+        value=f"{kpis['avg_tenure']:.2f} months"
+    )
 
-st.divider()    
+st.divider()
 
 
 ###### executive summary #####
@@ -197,42 +228,38 @@ insights = generate_insights()
 for insight  in insights:
     st.success(insight)
 
-##### About Section ####
-st.divider()
-st.header("About Neurosight")
+##### About Section #####
 
-st.header(" About NeuroSight")
+st.divider()
+
+st.header("About NeuroSight AI")
 
 st.write("""
-NeuroSight AI is an AI-powered Customer Churn Intelligence Platform.
-
-Current Capabilities:
-
-• Data Ingestion & ETL
-
-• PostgreSQL Data Warehouse
-
-• KPI Service Layer
-
-• Churn Analytics
-
-• Executive Insights
-
-• Interactive Dashboard
-
-Upcoming Features:
-
-• Revenue Risk Analysis
-
-• Customer Risk Segmentation
-
-• AI Copilot
-
-• Churn Prediction Model
-
-• Executive Reporting
-
-• Automated Business Recommendations
+NeuroSight AI is an AI-powered Customer Churn Intelligence Platform that combines analytics, machine learning, and business intelligence to identify churn risk and support data-driven retention strategies.
 """)
 
+st.subheader("Current Capabilities")
 
+st.markdown("""
+- Data Ingestion & ETL
+- PostgreSQL Data Warehouse
+- Dockerized Database
+- KPI Service Layer
+- FastAPI Backend
+- Customer Churn Analytics
+- Machine Learning Prediction
+- Executive Insights
+- Interactive Streamlit Dashboard
+""")
+
+st.subheader("Upcoming Features")
+
+st.markdown("""
+- API-driven Analytics Dashboard
+- AI Copilot
+- Executive PDF Reports
+- Automated Model Retraining
+- Cloud Deployment
+- User Authentication
+- Monitoring & Logging
+""")

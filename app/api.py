@@ -32,3 +32,25 @@ def get_kpis():
 
     }
 
+
+@app.get("/contract_churn")
+def get_contract_churn():
+    return get_contract_churn().to_dict(orient="records")
+
+@app.get("/tenure_churn")
+def get_tenure_churn():
+    return get_tenure_churn().to_dict(orient="records") 
+
+@app.get("/payment_method_churn")
+def get_payment_method_churn():
+    return get_payment_method_churn().to_dict(orient="records") 
+
+@app.get("/customer_risk_segments")
+def get_customer_risk_segments():
+    return get_customer_risk_segments().to_dict(orient="records")
+
+@app.get("/revenue_risk")
+def get_revenue_risk():
+    return get_revenue_risk().to_dict(orient="records") 
+
+
