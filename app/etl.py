@@ -1,23 +1,26 @@
 from pathlib import Path
+
 import pandas as pd
 
+from app.database import engine
 
 
-#### Project Root ####
+##### Project Paths
+
 
 project_root = Path(__file__).parent.parent
-
-#### dataset path ####
-
 csv_file = project_root / "data" / "telco_churn.csv"
 
 print(f"Loading file: {csv_file}")
 
-### loading csv ###
+
+
+##### Load Dataset
+
 
 df = pd.read_csv(csv_file)
 
-print("\n Dataset loaded successfully")
+print("\nDataset loaded successfully")
 
 print("\nShape")
 print(df.shape)
@@ -25,20 +28,24 @@ print(df.shape)
 print("\nColumns")
 print(df.columns.tolist())
 
-print("\ndata types")
+print("\nData Types")
 print(df.dtypes)
 
-print("\nmissing values")
+print("\nMissing Values")
 print(df.isnull().sum())
 
-print("\nduplicate rows")
+print("\nDuplicate Rows")
 print(df.duplicated().sum())
 
-
-print("\Churn Distribution")
+print("\nChurn Distribution")
 print(df["Churn"].value_counts())
 
-# Replace blank values with NaN
+
+
+##### Data Cleaning
+
+
+# Replace blank strings with None
 df["TotalCharges"] = df["TotalCharges"].replace(" ", None)
 
 # Convert to numeric
@@ -47,30 +54,22 @@ df["TotalCharges"] = pd.to_numeric(
     errors="coerce"
 )
 
-print("\nTotalCharges dtype:")
+print("\nTotalCharges Data Type")
 print(df["TotalCharges"].dtype)
 
-print("\nMissing TotalCharges:")
+print("\nMissing TotalCharges")
 print(df["TotalCharges"].isnull().sum())
 
 
 
+#### Load into PostgreSQL
 
-### connecting postgresql database 
-
-from sqlalchemy import create_engine
-
-engine = create_engine(
-    "postgresql://postgres:17032004@localhost:5434/neurosight"
-)
 
 df.to_sql(
-    "customers",
-    engine,
+    name="customers",
+    con=engine,
     if_exists="replace",
     index=False
-
 )
 
-
-print("\nData loaded into postgresql successfully")
+print("\nData loaded into PostgreSQL successfully.")

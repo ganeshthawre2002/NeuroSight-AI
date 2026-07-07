@@ -1,23 +1,9 @@
-import os
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
 import pandas as pd
 
-load_dotenv()   
+from app.database import engine
 
-DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL is None:
-    raise ValueError("DATABASE_URL not found. Check your .env file")
-
-engine = create_engine(DATABASE_URL)
-# =========================
-# SAFE HELPER
-# =========================
-def safe_float(value):
-    if value is None:
-        return 0.0
-    return round(float(value), 2)
+##### Helpers
 
 
 def safe_int(value):
@@ -26,29 +12,39 @@ def safe_int(value):
     return int(value)
 
 
-# =========================
-# KPI FUNCTIONS
-# =========================
+def safe_float(value):
+    if value is None:
+        return 0.0
+    return round(float(value), 2)
+
+
+def query_dataframe(sql: str):
+    return pd.read_sql(sql, engine)
+
+
+
+##### KPIs
+
 
 def get_total_customers():
-    query = """
+    sql = """
     SELECT COUNT(*) AS total_customers
     FROM customers
     """
-    return safe_int(pd.read_sql(query, engine).iloc[0, 0])
+    return safe_int(query_dataframe(sql).iloc[0, 0])
 
 
 def get_churned_customers():
-    query = """
+    sql = """
     SELECT COUNT(*) AS churned_customers
     FROM customers
-    WHERE "Churn" = 'Yes'
+    WHERE "Churn"='Yes'
     """
-    return safe_int(pd.read_sql(query, engine).iloc[0, 0])
+    return safe_int(query_dataframe(sql).iloc[0, 0])
 
 
 def get_churn_rate():
-    query = """
+    sql = """
     SELECT
         (
             100.0 *
@@ -57,46 +53,49 @@ def get_churn_rate():
         ) AS churn_rate
     FROM customers
     """
-    value = pd.read_sql(query, engine).iloc[0, 0]
-    return safe_float(value)
+    return safe_float(query_dataframe(sql).iloc[0, 0])
 
 
 def get_avg_monthly_charge():
-    query = """
-    SELECT AVG("MonthlyCharges") AS avg_monthly_charge
+    sql = """
+    SELECT AVG("MonthlyCharges")
     FROM customers
     """
-    value = pd.read_sql(query, engine).iloc[0, 0]
-    return safe_float(value)
+    return safe_float(query_dataframe(sql).iloc[0, 0])
 
 
 def get_avg_tenure():
-    query = """
-    SELECT AVG(tenure) AS avg_tenure
+    sql = """
+    SELECT AVG(tenure)
     FROM customers
     """
-    value = pd.read_sql(query, engine).iloc[0, 0]
-    return safe_float(value)
+    return safe_float(query_dataframe(sql).iloc[0, 0])
+
+
+##### Charts
 
 
 def get_contract_churn():
-    query = """
+    sql = """
     SELECT
         "Contract",
-        (
-            100.0 *
-            SUM(CASE WHEN "Churn"='Yes' THEN 1 ELSE 0 END)
-            / COUNT(*)
+        ROUND(
+            (
+                100.0 *
+                SUM(CASE WHEN "Churn"='Yes' THEN 1 ELSE 0 END)
+                / COUNT(*)
+            )::numeric,
+            2
         ) AS churn_rate
     FROM customers
     GROUP BY "Contract"
     ORDER BY churn_rate DESC
     """
-    return pd.read_sql(query, engine)
+    return query_dataframe(sql)
 
 
 def get_tenure_churn():
-    query = """
+    sql = """
     SELECT
         CASE
             WHEN tenure <= 12 THEN '0-12 Months'
@@ -105,37 +104,53 @@ def get_tenure_churn():
             ELSE '48+ Months'
         END AS tenure_group,
 
-        (
-            100.0 *
-            SUM(CASE WHEN "Churn"='Yes' THEN 1 ELSE 0 END)
-            / COUNT(*)
+        ROUND(
+            (
+                100.0 *
+                SUM(CASE WHEN "Churn"='Yes' THEN 1 ELSE 0 END)
+                / COUNT(*)
+            )::numeric,
+            2
         ) AS churn_rate
 
     FROM customers
+
     GROUP BY 1
+
     ORDER BY MIN(tenure)
     """
-    return pd.read_sql(query, engine)
+    return query_dataframe(sql)
 
 
 def get_payment_method_churn():
-    query = """
+    sql = """
     SELECT
         "PaymentMethod",
-        (
-            100.0 *
-            SUM(CASE WHEN "Churn"='Yes' THEN 1 ELSE 0 END)
-            / COUNT(*)
+
+        ROUND(
+            (
+                100.0 *
+                SUM(CASE WHEN "Churn"='Yes' THEN 1 ELSE 0 END)
+                / COUNT(*)
+            )::numeric,
+            2
         ) AS churn_rate
+
     FROM customers
+
     GROUP BY "PaymentMethod"
+
     ORDER BY churn_rate DESC
     """
-    return pd.read_sql(query, engine)
+    return query_dataframe(sql)
+
+
+
+##### Customer Risk
 
 
 def get_customer_risk_segments():
-    query = """
+    sql = """
     SELECT
         "customerID",
         tenure,
@@ -144,59 +159,91 @@ def get_customer_risk_segments():
         "Churn",
 
         CASE
+
             WHEN tenure <= 12
-                 AND "Contract" = 'Month-to-month'
-                 AND "MonthlyCharges" > 70
+                 AND "Contract"='Month-to-month'
+                 AND "MonthlyCharges">70
+
                 THEN 'Critical Risk'
 
             WHEN tenure <= 24
-                 AND "Contract" = 'Month-to-month'
+                 AND "Contract"='Month-to-month'
+
                 THEN 'High Risk'
 
-            WHEN "Contract" = 'One year'
+            WHEN "Contract"='One year'
+
                 THEN 'Medium Risk'
 
             ELSE 'Low Risk'
+
         END AS risk_segment
 
     FROM customers
     """
-    return pd.read_sql(query, engine)
+    return query_dataframe(sql)
 
 
 def get_revenue_risk():
-    query = """
+    sql = """
     SELECT
+
         CASE
-            WHEN tenure <= 12 AND "Contract" = 'Month-to-month' THEN 'Critical Risk'
-            WHEN tenure <= 24 AND "Contract" = 'Month-to-month' THEN 'High Risk'
-            WHEN "Contract" = 'One year' THEN 'Medium Risk'
+
+            WHEN tenure <= 12
+                 AND "Contract"='Month-to-month'
+
+                THEN 'Critical Risk'
+
+            WHEN tenure <= 24
+                 AND "Contract"='Month-to-month'
+
+                THEN 'High Risk'
+
+            WHEN "Contract"='One year'
+
+                THEN 'Medium Risk'
+
             ELSE 'Low Risk'
+
         END AS risk_segment,
 
         COUNT(*) AS customers,
 
-        SUM("MonthlyCharges") AS total_revenue,
+        ROUND(
+            SUM("MonthlyCharges")::numeric,
+            2
+        ) AS total_revenue,
 
-        SUM(
-            CASE WHEN "Churn" = 'Yes'
-            THEN "MonthlyCharges"
-            ELSE 0 END
+        ROUND(
+            SUM(
+                CASE
+                    WHEN "Churn"='Yes'
+                    THEN "MonthlyCharges"
+                    ELSE 0
+                END
+            )::numeric,
+            2
         ) AS revenue_at_risk
 
     FROM customers
+
     GROUP BY risk_segment
+
     ORDER BY revenue_at_risk DESC
     """
-    return pd.read_sql(query, engine)
+
+    return query_dataframe(sql)
 
 
-# =========================
-# LOCAL TEST
-# =========================
+
+##### Local Test
+
+
 if __name__ == "__main__":
+
     print("Total Customers:", get_total_customers())
     print("Churned Customers:", get_churned_customers())
-    print("Churn Rate:", get_churn_rate(), "%")
+    print("Churn Rate:", get_churn_rate())
     print("Average Monthly Charge:", get_avg_monthly_charge())
     print("Average Tenure:", get_avg_tenure())
